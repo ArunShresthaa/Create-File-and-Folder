@@ -155,10 +155,21 @@ async function createFileOrFolder() {
           }
         }
       }
-
       console.log("Final suggestions count:", suggestions.length);
       console.log("Final suggestions:", suggestions);
       quickPick.items = suggestions;
+
+      // If there's only one suggestion and it's a "Create" option, make sure it's active
+      if (
+        suggestions.length === 1 &&
+        suggestions[0].label.startsWith("Create:")
+      ) {
+        // Clear any previous selection and set the new item as active
+        quickPick.selectedItems = [];
+        setTimeout(() => {
+          quickPick.activeItems = [suggestions[0]];
+        }, 0);
+      }
     } catch (error) {
       console.error("Error updating suggestions:", error);
     }
@@ -168,24 +179,53 @@ async function createFileOrFolder() {
   quickPick.onDidChangeValue(async (value) => {
     currentInput = value;
     await updateSuggestions(value);
-  });
-
-  // Handle selection
+  }); // Handle selection
   quickPick.onDidAccept(async () => {
     console.log("=== onDidAccept called ===");
     const selected = quickPick.selectedItems[0];
+    const activeItem = quickPick.activeItems[0];
     console.log("selected item:", selected);
+    console.log("active item:", activeItem);
     console.log("currentInput:", JSON.stringify(currentInput));
+    console.log("quickPick.value:", JSON.stringify(quickPick.value));
 
-    if (selected) {
-      console.log("Has selected item");
+    // Use activeItem if available, otherwise fall back to selected item
+    const itemToUse = activeItem || selected;
+
+    // Check if we have a path input that should be created directly
+    const hasPathInput =
+      currentInput.includes("/") || currentInput.includes("\\");
+    const hasCreateSuggestion =
+      quickPick.items.length === 1 &&
+      quickPick.items[0].label.startsWith("Create:");
+
+    if (hasPathInput && hasCreateSuggestion) {
+      console.log("Direct path creation - using the Create suggestion");
+      const createItem = quickPick.items[0];
+      const relativePath = createItem.detail!;
+      const normalizedPath = relativePath.replace(/\\/g, "/");
+      const fullPath = path.resolve(workspaceRoot, normalizedPath);
+      const isFile = createItem.description!.includes("file");
+
+      console.log("relativePath:", JSON.stringify(relativePath));
+      console.log("normalizedPath:", JSON.stringify(normalizedPath));
+      console.log("fullPath:", JSON.stringify(fullPath));
+      console.log("isFile:", isFile);
+
+      await createPath(fullPath, isFile);
+      quickPick.hide();
+      return;
+    }
+
+    if (itemToUse) {
+      console.log("Has item to use:", itemToUse);
       if (
-        selected.description === "folder" &&
-        !selected.label.startsWith("Create:")
+        itemToUse.description === "folder" &&
+        !itemToUse.label.startsWith("Create:")
       ) {
         console.log("Selected a folder for navigation");
         // User selected a folder - update input to show the folder path
-        const folderPath = selected.detail === "." ? "" : selected.detail;
+        const folderPath = itemToUse.detail === "." ? "" : itemToUse.detail;
         quickPick.value = folderPath ? folderPath + "/" : "";
         currentInput = quickPick.value;
         console.log(
@@ -194,13 +234,13 @@ async function createFileOrFolder() {
         );
         await updateSuggestions(currentInput);
         return;
-      } else if (selected.label.startsWith("Create:")) {
+      } else if (itemToUse.label.startsWith("Create:")) {
         console.log("Selected create option");
         // Create new file/folder
-        const relativePath = selected.detail!;
+        const relativePath = itemToUse.detail!;
         const normalizedPath = relativePath.replace(/\\/g, "/");
-        const fullPath = path.join(workspaceRoot, normalizedPath);
-        const isFile = selected.description!.includes("file");
+        const fullPath = path.resolve(workspaceRoot, normalizedPath);
+        const isFile = itemToUse.description!.includes("file");
 
         console.log("relativePath:", JSON.stringify(relativePath));
         console.log("normalizedPath:", JSON.stringify(normalizedPath));
@@ -245,7 +285,7 @@ async function createFileOrFolder() {
         }
 
         const isFile = hasFileExtension(path.basename(targetPath));
-        const fullPath = path.join(workspaceRoot, targetPath);
+        const fullPath = path.resolve(workspaceRoot, targetPath);
         console.log("final isFile:", isFile);
         console.log("final fullPath:", JSON.stringify(fullPath));
 
