@@ -47,12 +47,18 @@ async function createFileOrFolder() {
   // Function to update suggestions based on input
   const updateSuggestions = async (inputValue: string) => {
     try {
+      console.log("=== updateSuggestions called ===");
+      console.log("inputValue:", JSON.stringify(inputValue));
+
       const suggestions: vscode.QuickPickItem[] = [];
 
       if (!inputValue.trim()) {
+        console.log("Empty input - showing all folders");
         // Show all workspace folders when no input
         for (const folderPath of allFolders) {
-          const relativePath = path.relative(workspaceRoot, folderPath);
+          const relativePath = path
+            .relative(workspaceRoot, folderPath)
+            .replace(/\\/g, "/");
           const displayPath = relativePath || ".";
           suggestions.push({
             label: path.basename(folderPath),
@@ -67,15 +73,18 @@ async function createFileOrFolder() {
 
       // Check if input contains path separator
       if (inputValue.includes("/") || inputValue.includes("\\")) {
+        console.log("Input contains path separator");
         // User is specifying a path, parse it
         const normalizedInput = inputValue.replace(/\\/g, "/");
-        const pathParts = normalizedInput.split("/");
-        const fileName = pathParts[pathParts.length - 1];
-        const folderPath = pathParts.slice(0, -1).join("/");
+        console.log("normalizedInput:", JSON.stringify(normalizedInput));
+        const lastSlashIndex = normalizedInput.lastIndexOf("/");
+        console.log("lastSlashIndex:", lastSlashIndex);
+        const fileName = normalizedInput.substring(lastSlashIndex + 1);
+        console.log("fileName:", JSON.stringify(fileName));
 
-        if (fileName.trim()) {
+        if (fileName && fileName.trim()) {
           const isFile = hasFileExtension(fileName);
-          const fullPath = path.join(workspaceRoot, normalizedInput);
+          console.log("isFile:", isFile);
 
           suggestions.push({
             label: `Create: ${fileName}`,
@@ -83,22 +92,28 @@ async function createFileOrFolder() {
             detail: normalizedInput,
             kind: vscode.QuickPickItemKind.Default,
           });
+          console.log("Added create suggestion:", suggestions[0]);
         }
       } else {
+        console.log("Simple input - no path separator");
         // Simple input - could be file or folder name
         const isFile = hasFileExtension(inputValue);
+        console.log("isFile:", isFile);
 
         // Add option to create in current file's directory
         const activeEditor = vscode.window.activeTextEditor;
         if (activeEditor && activeEditor.document.uri.scheme === "file") {
           const currentFileDir = path.dirname(activeEditor.document.uri.fsPath);
-          const relativePath = path.relative(workspaceRoot, currentFileDir);
+          const relativePath = path
+            .relative(workspaceRoot, currentFileDir)
+            .replace(/\\/g, "/");
           const displayPath = relativePath || ".";
 
           suggestions.push({
             label: `Create: ${inputValue}`,
             description: `${isFile ? "file" : "folder"} in current directory`,
-            detail: displayPath ? `${displayPath}/${inputValue}` : inputValue,
+            detail:
+              displayPath !== "." ? `${displayPath}/${inputValue}` : inputValue,
             kind: vscode.QuickPickItemKind.Default,
           });
         }
@@ -127,7 +142,9 @@ async function createFileOrFolder() {
 
           for (const folderPath of matchingFolders.slice(0, 10)) {
             // Limit to 10 results
-            const relativePath = path.relative(workspaceRoot, folderPath);
+            const relativePath = path
+              .relative(workspaceRoot, folderPath)
+              .replace(/\\/g, "/");
             const displayPath = relativePath || ".";
             suggestions.push({
               label: path.basename(folderPath),
@@ -139,6 +156,8 @@ async function createFileOrFolder() {
         }
       }
 
+      console.log("Final suggestions count:", suggestions.length);
+      console.log("Final suggestions:", suggestions);
       quickPick.items = suggestions;
     } catch (error) {
       console.error("Error updating suggestions:", error);
@@ -153,51 +172,86 @@ async function createFileOrFolder() {
 
   // Handle selection
   quickPick.onDidAccept(async () => {
+    console.log("=== onDidAccept called ===");
     const selected = quickPick.selectedItems[0];
+    console.log("selected item:", selected);
+    console.log("currentInput:", JSON.stringify(currentInput));
 
     if (selected) {
+      console.log("Has selected item");
       if (
         selected.description === "folder" &&
         !selected.label.startsWith("Create:")
       ) {
+        console.log("Selected a folder for navigation");
         // User selected a folder - update input to show the folder path
-        quickPick.value = selected.detail + "/";
+        const folderPath = selected.detail === "." ? "" : selected.detail;
+        quickPick.value = folderPath ? folderPath + "/" : "";
         currentInput = quickPick.value;
+        console.log(
+          "Updated quickPick.value to:",
+          JSON.stringify(quickPick.value)
+        );
         await updateSuggestions(currentInput);
         return;
       } else if (selected.label.startsWith("Create:")) {
+        console.log("Selected create option");
         // Create new file/folder
         const relativePath = selected.detail!;
-        const fullPath = path.join(workspaceRoot, relativePath);
+        const normalizedPath = relativePath.replace(/\\/g, "/");
+        const fullPath = path.join(workspaceRoot, normalizedPath);
         const isFile = selected.description!.includes("file");
+
+        console.log("relativePath:", JSON.stringify(relativePath));
+        console.log("normalizedPath:", JSON.stringify(normalizedPath));
+        console.log("fullPath:", JSON.stringify(fullPath));
+        console.log("isFile:", isFile);
 
         await createPath(fullPath, isFile);
         quickPick.hide();
         return;
       }
     } else {
+      console.log("No selected item - using currentInput");
       // No selection, use current input
       if (currentInput.trim()) {
+        console.log("currentInput has content");
         const activeEditor = vscode.window.activeTextEditor;
         let targetPath = currentInput;
 
+        // Normalize path separators
+        targetPath = targetPath.replace(/\\/g, "/");
+        console.log("normalized targetPath:", JSON.stringify(targetPath));
+
         // If no path specified and we have an active editor, use its directory
         if (
-          !currentInput.includes("/") &&
-          !currentInput.includes("\\") &&
+          !targetPath.includes("/") &&
           activeEditor &&
           activeEditor.document.uri.scheme === "file"
         ) {
+          console.log("Adding current file directory to path");
           const currentFileDir = path.dirname(activeEditor.document.uri.fsPath);
-          const relativePath = path.relative(workspaceRoot, currentFileDir);
-          targetPath = relativePath
-            ? `${relativePath}/${currentInput}`
-            : currentInput;
+          const relativePath = path
+            .relative(workspaceRoot, currentFileDir)
+            .replace(/\\/g, "/");
+          targetPath =
+            relativePath && relativePath !== "."
+              ? `${relativePath}/${targetPath}`
+              : targetPath;
+          console.log(
+            "final targetPath with current dir:",
+            JSON.stringify(targetPath)
+          );
         }
 
-        const isFile = hasFileExtension(currentInput);
+        const isFile = hasFileExtension(path.basename(targetPath));
         const fullPath = path.join(workspaceRoot, targetPath);
+        console.log("final isFile:", isFile);
+        console.log("final fullPath:", JSON.stringify(fullPath));
+
         await createPath(fullPath, isFile);
+      } else {
+        console.log("currentInput is empty");
       }
       quickPick.hide();
     }
@@ -219,34 +273,48 @@ function hasFileExtension(filePath: string): boolean {
 
 async function createPath(fullPath: string, isFile: boolean) {
   try {
+    console.log("=== createPath called ===");
+    console.log("fullPath:", JSON.stringify(fullPath));
+    console.log("isFile:", isFile);
+
     // Ensure parent directory exists
     const parentDir = path.dirname(fullPath);
+    console.log("parentDir:", JSON.stringify(parentDir));
+
     if (!fs.existsSync(parentDir)) {
+      console.log("Creating parent directory");
       fs.mkdirSync(parentDir, { recursive: true });
     }
 
     if (isFile) {
+      console.log("Creating file");
       // Create file
       if (fs.existsSync(fullPath)) {
+        console.log("File already exists, asking for overwrite");
         const overwrite = await vscode.window.showWarningMessage(
           `File "${path.basename(fullPath)}" already exists. Overwrite?`,
           "Yes",
           "No"
         );
         if (overwrite !== "Yes") {
+          console.log("User chose not to overwrite");
           return;
         }
       }
 
       fs.writeFileSync(fullPath, "");
+      console.log("File written");
       const uri = vscode.Uri.file(fullPath);
       await vscode.window.showTextDocument(uri);
+      console.log("File opened in editor");
       vscode.window.showInformationMessage(
         `File created: ${path.basename(fullPath)}`
       );
     } else {
+      console.log("Creating folder");
       // Create folder
       if (fs.existsSync(fullPath)) {
+        console.log("Folder already exists");
         vscode.window.showWarningMessage(
           `Folder "${path.basename(fullPath)}" already exists.`
         );
@@ -254,6 +322,7 @@ async function createPath(fullPath: string, isFile: boolean) {
       }
 
       fs.mkdirSync(fullPath, { recursive: true });
+      console.log("Folder created");
 
       // Open the folder in the explorer
       await vscode.commands.executeCommand(
@@ -265,6 +334,7 @@ async function createPath(fullPath: string, isFile: boolean) {
       );
     }
   } catch (error) {
+    console.error("Error in createPath:", error);
     throw new Error(
       `Failed to create ${isFile ? "file" : "folder"}: ${
         error instanceof Error ? error.message : "Unknown error"
