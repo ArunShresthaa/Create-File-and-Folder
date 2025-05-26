@@ -1,8 +1,8 @@
-# Quick File & Folder Creator
+# Create File and Folder Qu2. Search for "Create File and Folder Quickly"ckly
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/ArunShresthaa.quick-file-folder-creator)](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.quick-file-folder-creator)
-[![Downloads](https://img.shields.io/visual-studio-marketplace/d/ArunShresthaa.quick-file-folder-creator)](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.quick-file-folder-creator)
-[![Rating](https://img.shields.io/visual-studio-marketplace/r/ArunShresthaa.quick-file-folder-creator)](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.quick-file-folder-creator&ssr=false#review-details)
+[![Version](https://img.shields.io/visual-studio-marketplace/v/ArunShresthaa.create-file-folder-quickly)](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.create-file-folder-quickly)
+[![Downloads](https://img.shields.io/visual-studio-marketplace/d/ArunShresthaa.create-file-folder-quickly)](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.create-file-folder-quickly)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/ArunShresthaa.create-file-folder-quickly)](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.create-file-folder-quickly&ssr=false#review-details)
 
 A powerful VS Code extension for quickly creating files and folders with intelligent path suggestions. Stop navigating through the file explorer - create files and folders anywhere in your workspace with just a few keystrokes!
 
@@ -30,7 +30,7 @@ A powerful VS Code extension for quickly creating files and folders with intelli
 
 ## Usage
 
-1. Press `Ctrl+Shift+N` (or `Cmd+Shift+N` on Mac) to activate the Quick Create File/Folder command
+1. Press `Ctrl+N` (or `Cmd+N` on Mac) to activate the Create File/Folder Quickly command
 2. Start typing:
    - Just a name: Creates in the workspace root or current directory
    - Path/name: Creates in the specified path (parent directories created automatically)
@@ -59,13 +59,13 @@ A powerful VS Code extension for quickly creating files and folders with intelli
 
 ## Keyboard Shortcuts
 
-- `Ctrl+Shift+N` (Windows/Linux)
-- `Cmd+Shift+N` (macOS)
+- `Ctrl+N` (Windows/Linux)
+- `Cmd+N` (macOS)
 
 To customize the keyboard shortcut:
 
 1. Open the Keyboard Shortcuts editor (`Ctrl+K` then `Ctrl+S`)
-2. Search for "Quick Create File/Folder"
+2. Search for "Create File/Folder Quickly"
 3. Click the pencil icon and define your preferred shortcut
 
 ## Extension Settings
@@ -103,7 +103,7 @@ This extension is licensed under the [MIT License](https://github.com/ArunShrest
 
 If you find this extension useful, consider:
 
-- [Rating it on the VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.quick-file-folder-creator&ssr=false#review-details)
+- [Rating it on the VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.create-file-folder-quickly&ssr=false#review-details)
 - [Starring the GitHub repository](https://github.com/ArunShresthaa/Create-File-and-Folder)
 - [Reporting issues or suggesting features](https://github.com/ArunShresthaa/Create-File-and-Folder/issues)
 

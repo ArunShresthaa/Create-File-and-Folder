@@ -1,6 +1,6 @@
 {
-    "name": "quick-file-folder-creator",
-    "displayName": "Quick File & Folder Creator",
+    "name": "create-file-folder-quickly",
+    "displayName": "Create File and Folder Quickly",
     "description": "Create files and folders quickly with intelligent path suggestions",
     "version": "1.0.0",
     "engines": {
@@ -17,14 +17,14 @@
         "commands": [
             {
                 "command": "quickFileFolder.create",
-                "title": "Quick Create File/Folder"
+                "title": "Create File/Folder Quickly"
             }
         ],
         "keybindings": [
             {
                 "command": "quickFileFolder.create",
-                "key": "ctrl+shift+n",
-                "mac": "cmd+shift+n"
+                "key": "ctrl+n",
+                "mac": "cmd+n"
             }
         ]
     },
