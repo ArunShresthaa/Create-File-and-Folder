@@ -1,0 +1,41 @@
+{
+    "name": "quick-file-folder-creator",
+    "displayName": "Quick File & Folder Creator",
+    "description": "Create files and folders quickly with intelligent path suggestions",
+    "version": "1.0.0",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onCommand:quickFileFolder.create"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "quickFileFolder.create",
+                "title": "Quick Create File/Folder"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "quickFileFolder.create",
+                "key": "ctrl+shift+n",
+                "mac": "cmd+shift+n"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/node": "16.x",
+        "@types/vscode": "^1.60.0",
+        "typescript": "^4.9.4"
+    }
+}
