@@ -20,28 +20,29 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 async function createFileOrFolder() {
-  // Get the current file's directory as default
-  const activeEditor = vscode.window.activeTextEditor;
-  let defaultPath = "";
-
-  if (activeEditor && activeEditor.document.uri.scheme === "file") {
-    defaultPath = path.dirname(activeEditor.document.uri.fsPath);
-  } else if (
-    vscode.workspace.workspaceFolders &&
-    vscode.workspace.workspaceFolders.length > 0
+  if (
+    !vscode.workspace.workspaceFolders ||
+    vscode.workspace.workspaceFolders.length === 0
   ) {
-    defaultPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    vscode.window.showErrorMessage("No workspace folder open");
+    return;
   }
+
+  const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+
+  // Get all folders in workspace
+  const allFolders = await getAllFoldersInWorkspace(workspaceRoot);
 
   // Create QuickPick for path input with suggestions
   const quickPick = vscode.window.createQuickPick();
   quickPick.placeholder =
-    "Enter file/folder path (ends with extension = file, otherwise = folder)";
-  quickPick.value = defaultPath ? defaultPath + path.sep : "";
+    "Enter filename (with extension) or foldername, or select a folder first";
+  quickPick.value = "";
   quickPick.items = [];
   quickPick.canSelectMany = false;
 
   let currentInput = quickPick.value;
+  let selectedFolderPath = "";
 
   // Function to update suggestions based on input
   const updateSuggestions = async (inputValue: string) => {
@@ -49,88 +50,93 @@ async function createFileOrFolder() {
       const suggestions: vscode.QuickPickItem[] = [];
 
       if (!inputValue.trim()) {
+        // Show all workspace folders when no input
+        for (const folderPath of allFolders) {
+          const relativePath = path.relative(workspaceRoot, folderPath);
+          const displayPath = relativePath || ".";
+          suggestions.push({
+            label: path.basename(folderPath),
+            description: "folder",
+            detail: displayPath,
+            kind: vscode.QuickPickItemKind.Default,
+          });
+        }
         quickPick.items = suggestions;
         return;
       }
 
-      // Parse the input to get directory and partial name
-      let dirPath = "";
-      let partialName = "";
+      // Check if input contains path separator
+      if (inputValue.includes("/") || inputValue.includes("\\")) {
+        // User is specifying a path, parse it
+        const normalizedInput = inputValue.replace(/\\/g, "/");
+        const pathParts = normalizedInput.split("/");
+        const fileName = pathParts[pathParts.length - 1];
+        const folderPath = pathParts.slice(0, -1).join("/");
 
-      if (inputValue.includes(path.sep)) {
-        const lastSeparatorIndex = inputValue.lastIndexOf(path.sep);
-        dirPath = inputValue.substring(0, lastSeparatorIndex);
-        partialName = inputValue.substring(lastSeparatorIndex + 1);
-      } else {
-        dirPath = ".";
-        partialName = inputValue;
-      }
-
-      // Make sure directory path is absolute
-      if (!path.isAbsolute(dirPath)) {
-        if (
-          vscode.workspace.workspaceFolders &&
-          vscode.workspace.workspaceFolders.length > 0
-        ) {
-          dirPath = path.resolve(
-            vscode.workspace.workspaceFolders[0].uri.fsPath,
-            dirPath
-          );
-        } else {
-          dirPath = path.resolve(dirPath);
-        }
-      }
-
-      // Check if directory exists
-      if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
-        const items = fs.readdirSync(dirPath);
-
-        // Filter items based on partial name
-        const filteredItems = items.filter(
-          (item) =>
-            partialName === "" ||
-            item.toLowerCase().startsWith(partialName.toLowerCase())
-        );
-
-        // Add existing files and folders as suggestions
-        for (const item of filteredItems) {
-          const itemPath = path.join(dirPath, item);
-          const stat = fs.statSync(itemPath);
-          const isDirectory = stat.isDirectory();
+        if (fileName.trim()) {
+          const isFile = hasFileExtension(fileName);
+          const fullPath = path.join(workspaceRoot, normalizedInput);
 
           suggestions.push({
-            label: item,
-            description: isDirectory ? "folder" : "file",
-            detail: itemPath,
-            kind: isDirectory
-              ? vscode.QuickPickItemKind.Default
-              : vscode.QuickPickItemKind.Default,
+            label: `Create: ${fileName}`,
+            description: isFile ? "file" : "folder",
+            detail: normalizedInput,
+            kind: vscode.QuickPickItemKind.Default,
           });
         }
-
-        // Add parent directory navigation if not at root
-        if (dirPath !== path.dirname(dirPath)) {
-          suggestions.unshift({
-            label: "..",
-            description: "parent directory",
-            detail: path.dirname(dirPath),
-            kind: vscode.QuickPickItemKind.Separator,
-          });
-        }
-      }
-
-      // Add current input as create option if it doesn't exist
-      const fullPath = path.isAbsolute(inputValue)
-        ? inputValue
-        : path.resolve(dirPath, inputValue);
-      if (!fs.existsSync(fullPath) && inputValue.trim() !== "") {
+      } else {
+        // Simple input - could be file or folder name
         const isFile = hasFileExtension(inputValue);
-        suggestions.unshift({
-          label: `Create: ${path.basename(inputValue)}`,
-          description: isFile ? "new file" : "new folder",
-          detail: fullPath,
+
+        // Add option to create in current file's directory
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor && activeEditor.document.uri.scheme === "file") {
+          const currentFileDir = path.dirname(activeEditor.document.uri.fsPath);
+          const relativePath = path.relative(workspaceRoot, currentFileDir);
+          const displayPath = relativePath || ".";
+
+          suggestions.push({
+            label: `Create: ${inputValue}`,
+            description: `${isFile ? "file" : "folder"} in current directory`,
+            detail: displayPath ? `${displayPath}/${inputValue}` : inputValue,
+            kind: vscode.QuickPickItemKind.Default,
+          });
+        }
+
+        // Add option to create in workspace root
+        suggestions.push({
+          label: `Create: ${inputValue}`,
+          description: `${isFile ? "file" : "folder"} in workspace root`,
+          detail: inputValue,
           kind: vscode.QuickPickItemKind.Default,
         });
+
+        // Filter and show matching folders
+        const matchingFolders = allFolders.filter((folderPath) => {
+          const folderName = path.basename(folderPath);
+          return folderName.toLowerCase().includes(inputValue.toLowerCase());
+        });
+
+        if (matchingFolders.length > 0) {
+          suggestions.push({
+            label: "─────────────────",
+            description: "Select folder first",
+            detail: "",
+            kind: vscode.QuickPickItemKind.Separator,
+          });
+
+          for (const folderPath of matchingFolders.slice(0, 10)) {
+            // Limit to 10 results
+            const relativePath = path.relative(workspaceRoot, folderPath);
+            const displayPath = relativePath || ".";
+            suggestions.push({
+              label: path.basename(folderPath),
+              description: "folder",
+              detail: displayPath,
+              kind: vscode.QuickPickItemKind.Default,
+            });
+          }
+        }
       }
 
       quickPick.items = suggestions;
@@ -150,37 +156,47 @@ async function createFileOrFolder() {
     const selected = quickPick.selectedItems[0];
 
     if (selected) {
-      if (selected.label === "..") {
-        // Navigate to parent directory
-        quickPick.value = selected.detail + path.sep;
+      if (
+        selected.description === "folder" &&
+        !selected.label.startsWith("Create:")
+      ) {
+        // User selected a folder - update input to show the folder path
+        quickPick.value = selected.detail + "/";
         currentInput = quickPick.value;
         await updateSuggestions(currentInput);
         return;
-      } else if (selected.label.startsWith("Create: ")) {
+      } else if (selected.label.startsWith("Create:")) {
         // Create new file/folder
-        await createPath(selected.detail!, selected.description === "new file");
-        quickPick.hide();
-        return;
-      } else if (selected.description === "folder") {
-        // Navigate into folder
-        quickPick.value = selected.detail + path.sep;
-        currentInput = quickPick.value;
-        await updateSuggestions(currentInput);
-        return;
-      } else {
-        // Selected existing file - open it
-        const uri = vscode.Uri.file(selected.detail!);
-        await vscode.window.showTextDocument(uri);
+        const relativePath = selected.detail!;
+        const fullPath = path.join(workspaceRoot, relativePath);
+        const isFile = selected.description!.includes("file");
+
+        await createPath(fullPath, isFile);
         quickPick.hide();
         return;
       }
     } else {
       // No selection, use current input
       if (currentInput.trim()) {
+        const activeEditor = vscode.window.activeTextEditor;
+        let targetPath = currentInput;
+
+        // If no path specified and we have an active editor, use its directory
+        if (
+          !currentInput.includes("/") &&
+          !currentInput.includes("\\") &&
+          activeEditor &&
+          activeEditor.document.uri.scheme === "file"
+        ) {
+          const currentFileDir = path.dirname(activeEditor.document.uri.fsPath);
+          const relativePath = path.relative(workspaceRoot, currentFileDir);
+          targetPath = relativePath
+            ? `${relativePath}/${currentInput}`
+            : currentInput;
+        }
+
         const isFile = hasFileExtension(currentInput);
-        const fullPath = path.isAbsolute(currentInput)
-          ? currentInput
-          : path.resolve(defaultPath || ".", currentInput);
+        const fullPath = path.join(workspaceRoot, targetPath);
         await createPath(fullPath, isFile);
       }
       quickPick.hide();
@@ -238,6 +254,12 @@ async function createPath(fullPath: string, isFile: boolean) {
       }
 
       fs.mkdirSync(fullPath, { recursive: true });
+
+      // Open the folder in the explorer
+      await vscode.commands.executeCommand(
+        "revealInExplorer",
+        vscode.Uri.file(fullPath)
+      );
       vscode.window.showInformationMessage(
         `Folder created: ${path.basename(fullPath)}`
       );
@@ -249,6 +271,46 @@ async function createPath(fullPath: string, isFile: boolean) {
       }`
     );
   }
+}
+
+async function getAllFoldersInWorkspace(
+  workspaceRoot: string
+): Promise<string[]> {
+  const folders: string[] = [];
+
+  async function scanDirectory(dirPath: string) {
+    try {
+      const items = fs.readdirSync(dirPath, { withFileTypes: true });
+
+      for (const item of items) {
+        if (
+          item.isDirectory() &&
+          !item.name.startsWith(".") &&
+          item.name !== "node_modules"
+        ) {
+          const fullPath = path.join(dirPath, item.name);
+          folders.push(fullPath);
+
+          // Recursively scan subdirectories (limit depth to prevent performance issues)
+          const depth =
+            fullPath.split(path.sep).length -
+            workspaceRoot.split(path.sep).length;
+          if (depth < 10) {
+            // Limit to 10 levels deep
+            await scanDirectory(fullPath);
+          }
+        }
+      }
+    } catch (error) {
+      // Skip directories we can't read
+      console.error(`Cannot read directory ${dirPath}:`, error);
+    }
+  }
+
+  folders.push(workspaceRoot); // Include workspace root
+  await scanDirectory(workspaceRoot);
+
+  return folders.sort();
 }
 
 export function deactivate() {}
