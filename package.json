@@ -3,6 +3,10 @@
     "displayName": "Create File and Folder Quickly",
     "description": "Create files and folders quickly with intelligent path suggestions",
     "version": "1.0.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ArunShresthaa/Create-File-and-Folder"
+    },
     "engines": {
         "vscode": "^1.60.0"
     },
