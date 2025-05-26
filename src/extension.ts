@@ -32,11 +32,10 @@ async function createFileOrFolder() {
 
   // Get all folders in workspace
   const allFolders = await getAllFoldersInWorkspace(workspaceRoot);
-
   // Create QuickPick for path input with suggestions
   const quickPick = vscode.window.createQuickPick();
   quickPick.placeholder =
-    "Enter filename (with extension) or foldername, or select a folder first";
+    "Enter filename (with extension) or foldername (use file: or folder: prefix to be explicit)";
   quickPick.value = "";
   quickPick.items = [];
   quickPick.canSelectMany = false;
@@ -305,10 +304,63 @@ async function createFileOrFolder() {
 
 function hasFileExtension(filePath: string): boolean {
   const baseName = path.basename(filePath);
+
+  // User explicitly marked as file with prefix (we'll remove this later)
+  if (baseName.startsWith("file:")) {
+    return true;
+  }
+
+  // User explicitly marked as folder with prefix
+  if (baseName.startsWith("folder:")) {
+    return false;
+  }
+
+  // Common dot files (files that begin with a dot)
+  const commonDotFiles = [
+    ".gitignore",
+    ".env",
+    ".babelrc",
+    ".eslintrc",
+    ".npmrc",
+    ".prettierrc",
+    ".dockerignore",
+    ".editorconfig",
+    ".htaccess",
+    ".gitattributes",
+    ".gitkeep",
+    ".gitlab-ci.yml",
+    ".travis.yml",
+    ".stylelintrc",
+  ];
+
+  // Return true for exact matches with known dot files
+  if (commonDotFiles.includes(baseName)) {
+    return true;
+  }
+
+  // Handle common config files with dot prefix patterns
+  const dotPrefixPatterns = [
+    /^\.(env|eslintrc|babelrc|prettierrc|vscode)\..+$/, // .env.development, .vscode.json
+    /^\.(github|gitlab|circleci)\/.*$/, // .github/workflows
+    /^\.(yarn|npm)rc.*$/, // .yarnrc, .npmrc.local
+  ];
+
+  for (const pattern of dotPrefixPatterns) {
+    if (pattern.test(baseName)) {
+      return true;
+    }
+  }
+
+  // Look for file extension pattern
   const lastDotIndex = baseName.lastIndexOf(".");
 
-  // Check if there's a dot and it's not at the beginning (hidden files) or end
-  return lastDotIndex > 0 && lastDotIndex < baseName.length - 1;
+  // Standard file extension check - dot not at start or end
+  if (lastDotIndex > 0 && lastDotIndex < baseName.length - 1) {
+    return true;
+  }
+
+  // If no clear indicators, assume it's a folder
+  return false;
 }
 
 async function createPath(fullPath: string, isFile: boolean) {
@@ -317,22 +369,45 @@ async function createPath(fullPath: string, isFile: boolean) {
     console.log("fullPath:", JSON.stringify(fullPath));
     console.log("isFile:", isFile);
 
+    // Handle any prefixes we might have added in the hasFileExtension function
+    const baseName = path.basename(fullPath);
+    let finalPath = fullPath;
+
+    if (baseName.startsWith("file:")) {
+      // Remove the file: prefix
+      const dirName = path.dirname(fullPath);
+      const newBaseName = baseName.substring(5);
+      finalPath = path.join(dirName, newBaseName);
+      isFile = true; // Force file creation regardless of extension
+    } else if (baseName.startsWith("folder:")) {
+      // Remove the folder: prefix
+      const dirName = path.dirname(fullPath);
+      const newBaseName = baseName.substring(7);
+      finalPath = path.join(dirName, newBaseName);
+      isFile = false; // Force folder creation regardless of name
+    }
+
+    console.log(
+      "finalPath after prefix processing:",
+      JSON.stringify(finalPath)
+    );
+    console.log("isFile after prefix processing:", isFile);
+
     // Ensure parent directory exists
-    const parentDir = path.dirname(fullPath);
+    const parentDir = path.dirname(finalPath);
     console.log("parentDir:", JSON.stringify(parentDir));
 
     if (!fs.existsSync(parentDir)) {
       console.log("Creating parent directory");
       fs.mkdirSync(parentDir, { recursive: true });
     }
-
     if (isFile) {
       console.log("Creating file");
       // Create file
-      if (fs.existsSync(fullPath)) {
+      if (fs.existsSync(finalPath)) {
         console.log("File already exists, asking for overwrite");
         const overwrite = await vscode.window.showWarningMessage(
-          `File "${path.basename(fullPath)}" already exists. Overwrite?`,
+          `File "${path.basename(finalPath)}" already exists. Overwrite?`,
           "Yes",
           "No"
         );
@@ -342,35 +417,35 @@ async function createPath(fullPath: string, isFile: boolean) {
         }
       }
 
-      fs.writeFileSync(fullPath, "");
+      fs.writeFileSync(finalPath, "");
       console.log("File written");
-      const uri = vscode.Uri.file(fullPath);
+      const uri = vscode.Uri.file(finalPath);
       await vscode.window.showTextDocument(uri);
       console.log("File opened in editor");
       vscode.window.showInformationMessage(
-        `File created: ${path.basename(fullPath)}`
+        `File created: ${path.basename(finalPath)}`
       );
     } else {
       console.log("Creating folder");
       // Create folder
-      if (fs.existsSync(fullPath)) {
+      if (fs.existsSync(finalPath)) {
         console.log("Folder already exists");
         vscode.window.showWarningMessage(
-          `Folder "${path.basename(fullPath)}" already exists.`
+          `Folder "${path.basename(finalPath)}" already exists.`
         );
         return;
       }
 
-      fs.mkdirSync(fullPath, { recursive: true });
+      fs.mkdirSync(finalPath, { recursive: true });
       console.log("Folder created");
 
       // Open the folder in the explorer
       await vscode.commands.executeCommand(
         "revealInExplorer",
-        vscode.Uri.file(fullPath)
+        vscode.Uri.file(finalPath)
       );
       vscode.window.showInformationMessage(
-        `Folder created: ${path.basename(fullPath)}`
+        `Folder created: ${path.basename(finalPath)}`
       );
     }
   } catch (error) {

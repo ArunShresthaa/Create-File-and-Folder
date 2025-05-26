@@ -1,4 +1,4 @@
-# Create File and Folder Qu2. Search for "Create File and Folder Quickly"ckly
+# Create File and Folder Quickly
 
 [![Version](https://img.shields.io/visual-studio-marketplace/v/ArunShresthaa.create-file-folder-quickly)](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.create-file-folder-quickly)
 [![Downloads](https://img.shields.io/visual-studio-marketplace/d/ArunShresthaa.create-file-folder-quickly)](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.create-file-folder-quickly)
@@ -39,11 +39,14 @@ A powerful VS Code extension for quickly creating files and folders with intelli
 ### Creating Files
 
 - Type a name with an extension (e.g., `app.js`, `styles.css`) to create a file
+- Use prefix `file:` for files without extensions (e.g., `file:makefile`, `file:dockerfile`)
+- Special files like `.gitignore`, `.env` are automatically recognized as files
 - If created, the file will automatically open in the editor
 
 ### Creating Folders
 
 - Type a name without an extension (e.g., `components`, `utils`) to create a folder
+- Use prefix `folder:` if you want to force folder creation for names that might be detected as files
 - The folder will be revealed in the Explorer after creation
 
 ### Navigating Paths
