@@ -1,8 +1,8 @@
 # Create File and Folder Quickly
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/ArunShresthaa.create-file-folder-quickly)](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.create-file-folder-quickly)
-[![Downloads](https://img.shields.io/visual-studio-marketplace/d/ArunShresthaa.create-file-folder-quickly)](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.create-file-folder-quickly)
-[![Rating](https://img.shields.io/visual-studio-marketplace/r/ArunShresthaa.create-file-folder-quickly)](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.create-file-folder-quickly&ssr=false#review-details)
+[![Version](https://img.shields.io/visual-studio-marketplace/v/ArunShrestha.create-file-folder-quickly)](https://marketplace.visualstudio.com/items?itemName=ArunShrestha.create-file-folder-quickly)
+[![Downloads](https://img.shields.io/visual-studio-marketplace/d/ArunShrestha.create-file-folder-quickly)](https://marketplace.visualstudio.com/items?itemName=ArunShrestha.create-file-folder-quickly)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/ArunShrestha.create-file-folder-quickly)](https://marketplace.visualstudio.com/items?itemName=ArunShrestha.create-file-folder-quickly&ssr=false#review-details)
 
 A powerful VS Code extension for quickly creating files and folders with intelligent path suggestions. Stop navigating through the file explorer - create files and folders anywhere in your workspace with just a few keystrokes!
 
@@ -106,7 +106,7 @@ This extension is licensed under the [MIT License](https://github.com/ArunShrest
 
 If you find this extension useful, consider:
 
-- [Rating it on the VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ArunShresthaa.create-file-folder-quickly&ssr=false#review-details)
+- [Rating it on the VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ArunShrestha.create-file-folder-quickly&ssr=false#review-details)
 - [Starring the GitHub repository](https://github.com/ArunShresthaa/Create-File-and-Folder)
 - [Reporting issues or suggesting features](https://github.com/ArunShresthaa/Create-File-and-Folder/issues)
 
